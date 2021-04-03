@@ -1,0 +1,238 @@
+3.3 data type
+
+    char    b
+    short   w
+    int     l
+    long    q
+    char*   q
+    float   s
+    double  l
+
+
+3.4 registers
+
+    63      31      15      7       0
+    %rax    %eax    %ax     %al
+    %rbx    %ebx    %bx     %bl
+    %rcx    %ecx    %cx     %cl
+    %rdx    %edx    %dx     %dl
+    %rsi    %esi    %si     %sil
+    %rdi    %edi    %di     %dil
+    %rbp    %ebp    %bp     %bpl
+    %rsp    %esp    %sp     %spl
+    %r8     %r8d    %r8w    %r8b
+    %r9     %r9d    %r9w    %r9b
+    %r10    %r10d   %r10w   %r10b
+    %r11    %r11d   %r11w   %r11b
+    %r12    %r12d   %r12w   %r12b
+    %r13    %r13d   %r13w   %r13b
+    %r14    %r14d   %r14w   %r14b
+    %r15    %r15d   %r15w   %r15b
+
+    %rsp is stack pointer
+    %rbp is frame pointer
+
+
+3.4.1 operand
+
+    type        format          value
+    immediate   $Imm            Imm
+    register    r_a             R[r_a]
+    memory      Imm             M[Imm]
+    memory      (r_a)           M[R[r_a]]
+    memory      Imm(r_b)        M[Imm+R[r_b]]
+    memory      (r_b,r_i)       M[R[r_b]+R[r_i]]
+    memory      Imm(r_b,r_i)    M[Imm+R[r_b]+R[r_i]]
+    memory      (,r_i,s)        M[R[r_i]*s]
+    memory      Imm(,r_i,s)     M[Imm+R[r_i]*s]
+    memory      (r_b,r_i,s)     M[R[r_b]+R[r_i]*s]
+    memory      Imm(r_b,r_i,s)  M[Imm+R[r_b]+R[r_i]*s]
+
+
+3.4.2 move
+
+    command         effect
+    MOV     S,D     D<-S
+    movb
+    movw
+    movl
+    movq
+    movabsq I,R     R<-I
+    MOVZ    S,R     R<-zero_ext(S)
+    movzbw
+    movzbl
+    movzwl
+    movzbq
+    movzwq
+    MOVS    S,R     R<-sign_ext(S)
+    movsbw
+    movsbl
+    movswl
+    movsbq
+    movswq
+    movslq
+    cltq            %rax<-sign_ext(%eax)
+
+    operands cannot be in memory at the same time
+    movq could only be used as move two's complement of the source to the destination
+    movabsq can move any 64 bit immediates to destination which can only be a register
+    movb & movw only change the lowest byte or word od destination
+    but movl will set the highest 2 words to 0x00000000
+
+
+3.4.4 push and pop
+
+    command         effect
+    pushq   S       R[%rsp]<-R[%rsp]-8;
+                    M[R[%rsp]]<-S
+    popq    D       D<-M[R[%rsp]];
+                    R[%rsp]<-R[%rsp]+8
+    
+    both operate 4 words data
+
+
+3.5 arithmetic and logic
+
+    command         effect
+    leaq    S,D     D<-&S
+
+    INC     D       D<-D+1
+    DEC     D       D<-D-1
+    NEG     D       D<--D
+    NOT     D       D<--D
+
+    ADD     S,D     D<-D+S
+    SUB     S,D     D<-D-S
+    IMUL    S,D     D<-D*S
+    XOR     S,D     D<-D^S
+    OR      S,D     D<-D|S
+    AND     S,D     D<-D&S
+
+    SAL     k,D     D<-D<<k
+    SHL     k,D     D<-D<<k
+    SAR     k,D     D<-D>>k(arithmetic)
+    SHR     k,D     D<-D>>k(logic)
+
+    imulq   S       R[%rdx]: R[%rax]<-S*R[%rax](signed)
+    mulq    S       R[%rdx]: R[%rax]<-S*R[%rax](unsigned)
+
+    clto            R[%rdx]: R[%rax]<-sign_ext(R[%rax])(8 words)
+
+    idivq   S       R[%rdx]<-R[$rdx]: R[%rax] mod S
+                    R[%rdx]<-R[%rdx]: R[%rax] / S(signed)
+
+    idivq   S       R[%rdx]<-R[$rdx]: R[%rax] mod S
+                    R[%rdx]<-R[%rdx]: R[%rax] / S(unsigned)
+
+    A: B represents that the higher 4 words in A and lower 4 words in B
+    destination of leaq must be register
+    
+
+3.6 control
+
+3.6.1 condition code
+    
+    CF: carry flag    - carry happened to the highest bit
+                        to examine overflow of unsigned operation
+    ZF: zero flag     - result of last operation is 0
+    SF: sign flag     - result of last operation is negative
+    OF: overflow flag - overflow of complements - positive or negative
+
+    C expression
+    CF  (unsigned)t < (unsigned)a
+    ZF  (t == 0)
+    SF  (t < 0)
+    OF  (a < 0 == b < 0) && (t < 0 != a < 0)
+
+    command         base-on
+    CMP     S1,S2   S2-S1
+    cmpb
+    cmpw
+    cmpl
+    cmpq
+    TEST    S1,S2   S1&S2
+    testb
+    testw
+    testl
+    testq
+
+
+3.6.2 access condition code
+
+    command     same-as     effect          condition
+    sete    D   setz        D<-ZF           equal/zero
+    setne   D   setnz       D<-~ZF          not equal/zero
+    sets    D               D<-SF           negative
+    setns   D               D<-~SF          not negative
+    setg    D   setnle      D<-~(SF^OF)&~ZF signed>
+    setge   D   setnl       D<-~(SF^OF)     signed>=
+    setl    D   setnge      D<-SF^OF        signed<
+    setle   D   setng       D<-(SF^OF)|ZF   signed<=
+    seta    D   setnbe      D<-~CF&~ZF      unsigned>
+    setae   D   setnb       D<-~CF          unsigned>=
+    setb    D   setnae      D<-CF           unsigned<
+    setbe   D   setna       D<-CF|ZF        unsigned<=
+
+
+3.6.3 jump
+
+    command             same-as     condition
+    jmp     Label                   1
+    jmp     *Operand                1
+    je      Label       jz          ZF
+    jne     Label       jnz         ~ZF
+    js      Label                   SF
+    jns     Label                   ~SF
+    jg      Label       jnle        ~(SF^OF)&~ZF
+    jge     Label       jnl         ~(SF^OF)
+    jl      Label       jnge        SF^OF
+    jle     Label       jng         (SF^OF)|ZF
+    ja      Label       jnbe        ~CF&~ZF
+    jae     Label       jnb         ~CF
+    jb      Label       jnae        CF
+    jbe     Label       jna         CF|ZF
+
+    cmove   S,R         cmovz       ZF
+    cmovne  S,R         cmovnz      ~ZF
+    cmovs   S,R                     SF
+    cmovns  S,R                     ~SF
+    cmovg   S,R         cmovnle     ~(SF^OF)&~ZF
+    cmovge  S,R         cmovnl      ~(SF^OF)
+    cmovl   S,R         cmovnge     SF^OF
+    cmovle  S,R         cmovng      (SF^OF)|ZF
+    cmova   S,R         cmovnbe     ~CF&~ZF
+    cmovae  S,R         cmovnb      ~CF
+    cmovb   S,R         cmovnae     CF
+    cmovbe  S,R         cmovna      CF|ZF
+
+
+3.7 procedure
+
+    %rax stores the return value
+
+
+3.7.3 transfer data
+
+        1       2       3       4       5       6
+    64  %rdi    %rsi    %rdx    %rcx    %r8     %r9
+    32  %edi    %esi    %edx    %ecx    %r8d    %r9d
+    16  %di     %si     %dx     %cx     %r8w    %r9w
+    8   %dil    %sil    %dl     %cl     %r8b    %r9b
+
+    parameters indexed after 6 will be transferred over stack
+    7-th parameter is at the top of stack (%rsp+8)
+    8-th at stack (%rsp+16), etc
+    %rsp points to return address
+
+
+3.7.5 register
+
+    callee saved registers
+        %rbx %rbp %r12-%r15
+    caller saved registers
+        all others except %rsp
+
+
+3.10.5 variable length stack frame
+
+    unlike IA32, x86 today don't always use frame pointer in static length stack frame
